@@ -5,6 +5,7 @@ const int PACKET_SIZE = 25;
 void setup() {
   Serial.begin(115200);
   while (!Serial)
+  delay(100);
   Serial.println("Connected!");
 
   LoRa.setPins(10, 2, 3);
@@ -20,7 +21,7 @@ void setup() {
     while (1);
   }
 
-  LoRa.receive(PACKET_SIZE);
+  LoRa.receive();
 
   Serial.println("Ready to receive!");
 }
@@ -44,11 +45,18 @@ struct Data {
 };
 
 void onReceive(int packetSize) {
+  if (packetSize != PACKET_SIZE) {
+    Serial.print("RANDOM PACKET (size: ");
+    Serial.print(packetSize);
+    Serial.println(")");
+  }
   struct Data data;
   LoRa.readBytes((char*)(&data), PACKET_SIZE);
 
   Serial.print("size:");
   Serial.print(packetSize);
+  Serial.print(",rssi:");
+  Serial.print(LoRa.packetRssi());
   Serial.print(",id:");
   Serial.print(data.id);
   Serial.print(",temp:");
@@ -62,5 +70,5 @@ void onReceive(int packetSize) {
   Serial.print(",long:");
   Serial.print(data.gps_long);
   Serial.print(",alt:");
-  Serial.print(data.gps_alt);
+  Serial.println(data.gps_alt);
 }
