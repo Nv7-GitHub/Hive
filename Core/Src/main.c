@@ -27,6 +27,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <bme280.h>
+#include <RF95.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -134,6 +135,18 @@ int main(void)
   I2C_routine();
   if (bme280_init(&bme280) != 0) {
 	  Error();
+  }
+  if (bme280_set_power_mode(BME280_NORMAL_MODE) != 0) {
+	  Error();
+  }
+  if (bme280_set_oversamp_humidity(BME280_OVERSAMP_1X) != 0) {
+  	  Error();
+  }
+  if (bme280_set_oversamp_pressure(BME280_OVERSAMP_1X) != 0) {
+      Error();
+  }
+  if (bme280_set_oversamp_temperature(BME280_OVERSAMP_1X) != 0) {
+      Error();
   }
 
   /* USER CODE END 2 */
