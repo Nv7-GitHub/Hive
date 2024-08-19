@@ -48,6 +48,7 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+extern uint8_t LoRa_buff[RH_RF95_FIFO_SIZE];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,12 +59,22 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void BuzzOn() {
+	htim1.Instance->CCR1 = 1;
+}
+
+void BuzzOff() {
+	htim1.Instance->CCR1 = 0;
+}
+
 void Error() {
 	while (1) {
-		HAL_Delay(500);
+		HAL_Delay(250);
 		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
-		HAL_Delay(500);
+		BuzzOn();
+		HAL_Delay(250);
 		HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+		BuzzOff();
 	}
 }
 
@@ -79,11 +90,15 @@ struct Data {
   float gps_alt;
 
   uint32_t time;
+
+  char zero;
 };
 
 struct Data data;
 
 void ReadData() {
+  data.id = ID;
+
   uint32_t pressure;
   int32_t temperature;
   uint32_t humidity;
@@ -93,6 +108,36 @@ void ReadData() {
   data.humidity = (float)humidity;
   data.temp = (float)temperature;
   data.pressure = (float)pressure;
+
+  data.zero = 0;
+}
+
+void WaitNoRxTx() {
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+	HAL_Delay(500);
+	HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+}
+
+void WaitRx() {
+	bool done = false;
+
+	while (!done) {
+		RF95_setModeRx_Continuous();
+		HAL_Delay(400);
+		if (RF95_Check_RxDone()) {
+			RF95_setModeIdle();
+
+			BuzzOn();
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);
+			HAL_Delay(100);
+			BuzzOff();
+			HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
+			continue;
+		}
+	    done = true;
+	}
+
+	RF95_setModeIdle();
 }
 /* USER CODE END 0 */
 
@@ -132,6 +177,8 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+
   I2C_routine();
   if (bme280_init(&bme280) != 0) {
 	  Error();
@@ -149,6 +196,18 @@ int main(void)
       Error();
   }
 
+  RF95_setPreambleLength(8);
+  RF95_setTxPower(30, false);
+  if (!RF95_Init()) {
+	  Error();
+  }
+  if (!RF95_setModemConfig(Bw31_25Cr48Sf512)) {
+	  Error();
+  }
+  if (!RF95_setFrequency(915.0)) {
+	  Error();
+  }
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -156,8 +215,12 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
+
+	  WaitNoRxTx(); // Wait 500ms after sending
+	  WaitRx(); // Wait 400ms until channel is clear
+	  memcpy(&LoRa_buff, &data, sizeof(data));
+	  RF95_send(LoRa_buff);
   }
   /* USER CODE END 3 */
 }
