@@ -28,6 +28,7 @@
 /* USER CODE BEGIN Includes */
 #include <bme280.h>
 #include <RF95.h>
+#include <gps.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -96,6 +97,8 @@ struct Data {
 
 struct Data data;
 
+
+extern GPS_t GPS;
 void ReadData() {
   data.id = ID;
 
@@ -108,6 +111,10 @@ void ReadData() {
   data.humidity = (float)humidity;
   data.temp = (float)temperature;
   data.pressure = (float)pressure;
+
+  data.gps_lat = GPS.dec_latitude;
+  data.gps_long = GPS.dec_longitude;
+  data.gps_alt = GPS.altitude_ft;
 
   data.zero = 0;
 }
@@ -138,6 +145,11 @@ void WaitRx() {
 	}
 
 	RF95_setModeIdle();
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(huart == &huart1) GPS_UART_CallBack();
 }
 /* USER CODE END 0 */
 
@@ -177,8 +189,10 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  // Buzz
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
 
+  // BME280
   I2C_routine();
   if (bme280_init(&bme280) != 0) {
 	  Error();
@@ -196,6 +210,7 @@ int main(void)
       Error();
   }
 
+  // Radio
   RF95_setPreambleLength(8);
   RF95_setTxPower(30, false);
   if (!RF95_Init()) {
@@ -207,6 +222,9 @@ int main(void)
   if (!RF95_setFrequency(915.0)) {
 	  Error();
   }
+
+  // GPS
+  GPS_Init();
 
   /* USER CODE END 2 */
 

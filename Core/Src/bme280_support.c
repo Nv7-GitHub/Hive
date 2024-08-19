@@ -133,7 +133,7 @@ struct bme280_t bme280;
 s32 bme280_data_readout_template(void)
 {
 	/* The variable used to assign the standby time*/
-	u8 v_stand_by_time_u8 = BME280_INIT_VALUE;
+	//u8 v_stand_by_time_u8 = BME280_INIT_VALUE;
 	/* The variable used to read uncompensated temperature*/
 	s32 v_data_uncomp_temp_s32 = BME280_INIT_VALUE;
 	/* The variable used to read uncompensated pressure*/
@@ -433,12 +433,12 @@ s8 BME280_SPI_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
 	u8 txarray[SPI_BUFFER_LEN]={0,};
 	u8 rxarray[SPI_BUFFER_LEN] = {0,};
 	u8 stringpos;
-	/*	For the SPI mode only 7 bits of register addresses are used.
-	The MSB of register address is declared the bit what functionality it is
-	read/write (read as 1/write as BME280_INIT_VALUE)*/
-	//txarray[BME280_INIT_VALUE] = reg_addr|SPI_READ;/*read routine is initiated register address is mask with 0x80*/
+	//	For the SPI mode only 7 bits of register addresses are used.
+	//The MSB of register address is declared the bit what functionality it is
+	//read/write (read as 1/write as BME280_INIT_VALUE)
+	//txarray[BME280_INIT_VALUE] = reg_addr|SPI_READ;//read routine is initiated register address is mask with 0x80
 
-	/*HAL_GPIO_WritePin( GPIOB, SPI2_CS1_Pin, GPIO_PIN_RESET );
+	HAL_GPIO_WritePin( GPIOB, SPI2_CS1_Pin, GPIO_PIN_RESET );
 	status = HAL_SPI_TransmitReceive( &hspi2, (uint8_t *)(&txarray), (uint8_t *)(&rxarray), cnt+1, 5);
 	while( hspi2.State == HAL_SPI_STATE_BUSY ) {};
 	HAL_GPIO_WritePin( GPIOB, SPI2_CS1_Pin, GPIO_PIN_SET );
@@ -471,8 +471,8 @@ s8 BME280_SPI_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
 	u8 stringpos = BME280_INIT_VALUE;
 	u8 index = BME280_INIT_VALUE;
 	for (stringpos = BME280_INIT_VALUE; stringpos < cnt; stringpos++) {
-		/* the operation of (reg_addr++)&0x7F done as per the
-		SPI communication protocol specified in the data sheet*/ /*
+		// the operation of (reg_addr++)&0x7F done as per the
+		//SPI communication protocol specified in the data sheet
 		index = stringpos * BME280_ADDRESS_INDEX;
 		array[index] = (reg_addr++) & SPI_WRITE;
 		//printf("%X ", array[stringpos]);
