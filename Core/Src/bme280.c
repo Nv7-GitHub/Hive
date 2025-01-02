@@ -591,22 +591,22 @@ u32 *v_pressure_u32, s32 *v_temperature_s32, u32 *v_humidity_u32)
 	/* check the p_bme280 structure pointer as NULL*/
 	if (p_bme280 == BME280_NULL) {
 		return E_BME280_NULL_PTR;
-		} else {
-			/* read the uncompensated pressure,
-			temperature and humidity*/
-			com_rslt =
-			bme280_read_uncomp_pressure_temperature_humidity(
-			&v_uncomp_pressure_s32, &v_uncom_temperature_s32,
-			&v_uncom_humidity_s32);
-			/* read the true pressure, temperature and humidity*/
-			*v_temperature_s32 =
-			bme280_compensate_temperature_int32(
-			v_uncom_temperature_s32);
-			*v_pressure_u32 = bme280_compensate_pressure_int32(
-			v_uncomp_pressure_s32);
-			*v_humidity_u32 = bme280_compensate_humidity_int32(
-			v_uncom_humidity_s32);
-		}
+	} else {
+		/* read the uncompensated pressure,
+		temperature and humidity*/
+		com_rslt =
+		bme280_read_uncomp_pressure_temperature_humidity(
+		&v_uncomp_pressure_s32, &v_uncom_temperature_s32,
+		&v_uncom_humidity_s32);
+		/* read the true pressure, temperature and humidity*/
+		*v_temperature_s32 =
+		bme280_compensate_temperature_int32(
+		v_uncom_temperature_s32);
+		*v_pressure_u32 = bme280_compensate_pressure_int32(
+		v_uncomp_pressure_s32);
+		*v_humidity_u32 = bme280_compensate_humidity_int32(
+		v_uncom_humidity_s32);
+	}
 	return com_rslt;
 }
 /*!

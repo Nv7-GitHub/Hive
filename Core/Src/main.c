@@ -38,7 +38,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define ID 1
+#define ID 10
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -79,6 +79,7 @@ void Error() {
 	}
 }
 
+#pragma pack(1)
 struct Data {
   uint8_t id;
 
@@ -92,31 +93,54 @@ struct Data {
 
   uint32_t time;
 
-  char zero;
+  char satcnt;
 };
 
 struct Data data;
 
+void resetBME() {
+	if (bme280_set_soft_rst() != 0) {
+		Error();
+	}
+
+	HAL_Delay(10);
+	if (bme280_set_power_mode(BME280_NORMAL_MODE) != 0) {
+	  Error();
+	}
+	if (bme280_set_oversamp_humidity(BME280_OVERSAMP_1X) != 0) {
+	  Error();
+	}
+	if (bme280_set_oversamp_pressure(BME280_OVERSAMP_1X) != 0) {
+	  Error();
+	}
+	if (bme280_set_oversamp_temperature(BME280_OVERSAMP_1X) != 0) {
+	  Error();
+	}
+	data.id = ID;
+}
+
 
 extern GPS_t GPS;
 void ReadData() {
-  data.id = ID;
+  //data.id = ID;
+	data.id++;
 
   uint32_t pressure;
   int32_t temperature;
   uint32_t humidity;
+  resetBME();
   if (bme280_read_pressure_temperature_humidity(&pressure, &temperature, &humidity) != 0) {
 	  Error();
   }
-  data.humidity = (float)humidity;
-  data.temp = (float)temperature;
-  data.pressure = (float)pressure;
+  data.humidity = (float)humidity/1000.0f;
+  data.temp = (float)temperature/100.0f;
+  data.pressure = (float)pressure/100.0f;
 
   data.gps_lat = GPS.dec_latitude;
   data.gps_long = GPS.dec_longitude;
-  data.gps_alt = GPS.altitude_ft;
+  data.gps_alt = GPS.msl_altitude;
 
-  data.zero = 0;
+  data.satcnt = GPS.satelites;
 }
 
 void WaitNoRxTx() {
@@ -149,7 +173,22 @@ void WaitRx() {
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	if(huart == &huart1) GPS_UART_CallBack();
+	if(huart == &huart1) {
+		GPS_UART_CallBack();
+	}
+}
+
+
+// ChatGPT
+void structToHexString(const void *inputStruct, size_t size, char *hexString) {
+    const unsigned char *bytePtr = (const unsigned char *)inputStruct;
+
+    for (size_t i = 0; i < size; ++i) {
+        sprintf(hexString + (i * 2), "%02X", bytePtr[i]);
+    }
+
+    // Null-terminate the string
+    hexString[size * 2] = '\0';
 }
 /* USER CODE END 0 */
 
@@ -195,36 +234,26 @@ int main(void)
   // BME280
   I2C_routine();
   if (bme280_init(&bme280) != 0) {
-	  Error();
-  }
-  if (bme280_set_power_mode(BME280_NORMAL_MODE) != 0) {
-	  Error();
-  }
-  if (bme280_set_oversamp_humidity(BME280_OVERSAMP_1X) != 0) {
-  	  Error();
-  }
-  if (bme280_set_oversamp_pressure(BME280_OVERSAMP_1X) != 0) {
       Error();
   }
-  if (bme280_set_oversamp_temperature(BME280_OVERSAMP_1X) != 0) {
-      Error();
-  }
+  resetBME();
 
   // Radio
   RF95_setPreambleLength(8);
-  RF95_setTxPower(30, false);
+  RF95_setTxPower(20, false);
   if (!RF95_Init()) {
 	  Error();
   }
-  if (!RF95_setModemConfig(Bw31_25Cr48Sf512)) {
+  /*if (!RF95_setModemConfig(Bw31_25Cr48Sf512)) {
 	  Error();
-  }
-  if (!RF95_setFrequency(915.0)) {
+  }*/
+  if (!RF95_setFrequency(868.0)) {
 	  Error();
   }
 
   // GPS
   GPS_Init();
+  char txinput[sizeof(data)*2 + 1];
 
   /* USER CODE END 2 */
 
@@ -237,8 +266,12 @@ int main(void)
 
 	  WaitNoRxTx(); // Wait 500ms after sending
 	  WaitRx(); // Wait 400ms until channel is clear
-	  memcpy(&LoRa_buff, &data, sizeof(data));
+
+	  ReadData();
+	  structToHexString((void*)&data, sizeof(data), &txinput[0]);
+	  memcpy(&LoRa_buff, &txinput, sizeof(txinput));
 	  RF95_send(LoRa_buff);
+
   }
   /* USER CODE END 3 */
 }

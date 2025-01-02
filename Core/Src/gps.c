@@ -35,10 +35,6 @@
 #include <usart.h>
 #include "gps.h"
 
-#if (GPS_DEBUG == 1)
-#include <usbd_cdc_if.h>
-#endif
-
 uint8_t rx_data = 0;
 uint8_t rx_buffer[GPSBUFSIZE];
 uint8_t rx_index = 0;
@@ -49,7 +45,8 @@ GPS_t GPS;
 void GPS_print(char *data){
 	char buf[GPSBUFSIZE] = {0,};
 	sprintf(buf, "%s\n", data);
-	CDC_Transmit_FS((unsigned char *) buf, (uint16_t) strlen(buf));
+	//CDC_Transmit_FS((unsigned char *) buf, (uint16_t) strlen(buf));
+	HAL_UART_Transmit(&huart2, (uint8_t *)buf, (uint16_t)strlen(buf), HAL_MAX_DELAY);
 }
 #endif
 
@@ -68,8 +65,9 @@ void GPS_UART_CallBack(){
 		GPS_print((char*)rx_buffer);
 		#endif
 
-		if(GPS_validate((char*) rx_buffer))
+		if(GPS_validate((char*) rx_buffer)) {
 			GPS_parse((char*) rx_buffer);
+		}
 		rx_index = 0;
 		memset(rx_buffer, 0, sizeof(rx_buffer));
 	}
@@ -116,15 +114,15 @@ int GPS_validate(char *nmeastr){
 }
 
 void GPS_parse(char *GPSstrParse){
-    if(!strncmp(GPSstrParse, "$GPGGA", 6)){
-    	if (sscanf(GPSstrParse, "$GPGGA,%f,%f,%c,%f,%c,%d,%d,%f,%f,%c", &GPS.utc_time, &GPS.nmea_latitude, &GPS.ns, &GPS.nmea_longitude, &GPS.ew, &GPS.lock, &GPS.satelites, &GPS.hdop, &GPS.msl_altitude, &GPS.msl_units) >= 1){
+    if(!strncmp(GPSstrParse, "$GNGGA", 6)){
+    	if (sscanf(GPSstrParse, "$GNGGA,%f,%f,%c,%f,%c,%d,%d,%f,%f,%c", &GPS.utc_time, &GPS.nmea_latitude, &GPS.ns, &GPS.nmea_longitude, &GPS.ew, &GPS.lock, &GPS.satelites, &GPS.hdop, &GPS.msl_altitude, &GPS.msl_units) >= 1){
     		GPS.dec_latitude = GPS_nmea_to_dec(GPS.nmea_latitude, GPS.ns);
     		GPS.dec_longitude = GPS_nmea_to_dec(GPS.nmea_longitude, GPS.ew);
     		return;
     	}
     }
-    else if (!strncmp(GPSstrParse, "$GPRMC", 6)){
-    	if(sscanf(GPSstrParse, "$GPRMC,%f,%f,%c,%f,%c,%f,%f,%d", &GPS.utc_time, &GPS.nmea_latitude, &GPS.ns, &GPS.nmea_longitude, &GPS.ew, &GPS.speed_k, &GPS.course_d, &GPS.date) >= 1)
+    else if (!strncmp(GPSstrParse, "$GNRMC", 6)){
+    	if(sscanf(GPSstrParse, "$GNRMC,%f,%f,%c,%f,%c,%f,%f,%d", &GPS.utc_time, &GPS.nmea_latitude, &GPS.ns, &GPS.nmea_longitude, &GPS.ew, &GPS.speed_k, &GPS.course_d, &GPS.date) >= 1)
     		return;
 
     }
